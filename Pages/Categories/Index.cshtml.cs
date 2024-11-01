@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Anton_Cosmina_Lab2.Data;
 using Anton_Cosmina_Lab2.Models;
+using Anton_Cosmina_Lab2.Models.ViewModels;
 
 namespace Anton_Cosmina_Lab2.Pages.Categories
 {
@@ -21,9 +22,28 @@ namespace Anton_Cosmina_Lab2.Pages.Categories
 
         public IList<Category> Category { get;set; } = default!;
 
-        public async Task OnGetAsync()
+        public CategoryIndexData CategoryData { get; set; } = new CategoryIndexData();
+        public int? SelectedCategoryId { get; set; }
+
+        public async Task OnGetAsync(int? id)
         {
-            Category = await _context.Category.ToListAsync();
+            // Încarcă toate categoriile și cărțile asociate prin BookCategories
+            CategoryData.Categories = await _context.Category
+                .Include(c => c.BookCategories)
+                .ThenInclude(bc => bc.Book)
+                .ThenInclude(b => b.Author)
+                .OrderBy(c => c.CategoryName)
+                .ToListAsync();
+
+            // Dacă o categorie este selectată, încarcă doar cărțile din acea categorie
+            if (id != null)
+            {
+                SelectedCategoryId = id.Value;
+                var selectedCategory = CategoryData.Categories
+                    .FirstOrDefault(c => c.ID == id.Value);
+
+                CategoryData.Books = selectedCategory?.BookCategories.Select(bc => bc.Book) ?? new List<Book>();
+            }
         }
     }
 }
